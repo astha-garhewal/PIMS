@@ -28,9 +28,21 @@ public class UserRepository : IUserRepository
             .FirstOrDefaultAsync(u => u.Email == email);
     }
 
+    public async Task<Role?> GetRoleByNameAsync(string roleName)
+    {
+        return await _context.Roles
+            .FirstOrDefaultAsync(r => r.RoleName == roleName);
+    }
+
     public async Task AddAsync(User user)
     {
         await _context.Users.AddAsync(user);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task AddUserRoleAsync(UserRole userRole)
+    {
+        await _context.UserRoles.AddAsync(userRole);
         await _context.SaveChangesAsync();
     }
 }

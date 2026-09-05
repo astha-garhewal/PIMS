@@ -76,6 +76,20 @@ public class AuthService : IAuthService
 
         await _userRepository.AddAsync(user);
 
+        var role = await _userRepository.GetRoleByNameAsync("User");
+
+        if (role == null)
+        {
+            throw new InvalidOperationException(
+                "User role is not configured.");
+        }
+
+        await _userRepository.AddUserRoleAsync(new UserRole
+        {
+            UserID = user.UserID,
+            RoleID = role.RoleID
+        });
+
         return new UserResponseDto
         {
             UserID = user.UserID,
