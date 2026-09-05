@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using PIMS.Application.DTOs.Products;
 using PIMS.Application.Interfaces;
 using PIMS.Domain.Entities;
@@ -7,10 +8,14 @@ namespace PIMS.Application.Services;
 public class ProductService : IProductService
 {
     private readonly IProductRepository _productRepository;
+    private readonly IMemoryCache _cache;
 
-    public ProductService(IProductRepository productRepository)
+    public ProductService(
+        IProductRepository productRepository,
+        IMemoryCache cache)
     {
         _productRepository = productRepository;
+        _cache = cache;
     }
 
     public async Task<ProductResponseDto> CreateAsync(CreateProductDto dto)
@@ -94,6 +99,15 @@ public class ProductService : IProductService
 
     public async Task<ProductResponseDto?> GetByIdAsync(int productId)
     {
+        var cacheKey = $"product_{productId}";
+
+        if (_cache.TryGetValue(
+            cacheKey,
+            out ProductResponseDto? cachedProduct))
+        {
+            return cachedProduct;
+        }
+
         var product = await _productRepository.GetByIdAsync(productId);
 
         if (product == null)
@@ -101,7 +115,7 @@ public class ProductService : IProductService
             return null;
         }
 
-        return new ProductResponseDto
+        var response = new ProductResponseDto
         {
             ProductID = product.ProductID,
             SKU = product.SKU,
@@ -113,6 +127,13 @@ public class ProductService : IProductService
                 .Select(pc => pc.Category.CategoryName)
                 .ToList()
         };
+
+            _cache.Set(
+                cacheKey,
+                response,
+                TimeSpan.FromMinutes(5));
+
+            return response;
     }
 
     public async Task<List<ProductResponseDto>> SearchAsync(
@@ -178,6 +199,7 @@ public class ProductService : IProductService
         product.UpdatedDate = DateTime.UtcNow;
 
         await _productRepository.UpdateAsync(product);
+        _cache.Remove($"product_{product.ProductID}");
 
         return new ProductResponseDto
         {
@@ -254,6 +276,7 @@ public class ProductService : IProductService
         foreach (var product in products)
         {
             await _productRepository.UpdateAsync(product);
+            _cache.Remove($"product_{product.ProductID}");
         }
 
         return products.Select(p => new ProductResponseDto

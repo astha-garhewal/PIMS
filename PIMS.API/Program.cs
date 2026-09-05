@@ -45,6 +45,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddMemoryCache();
 
 builder.Services.AddAuthentication(
     JwtBearerDefaults.AuthenticationScheme)

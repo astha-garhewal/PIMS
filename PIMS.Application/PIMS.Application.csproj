@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\PIMS.Domain\PIMS.Domain.csproj" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
   </ItemGroup>
 
   <PropertyGroup>
