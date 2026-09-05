@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PIMS.Application.DTOs.Products;
 using PIMS.Application.Interfaces;
@@ -6,6 +7,7 @@ namespace PIMS.API.Controllers;
 
 [ApiController]
 [Route("api/v1/products")]
+[Authorize]
 public class ProductsController : ControllerBase
 {
     private readonly IProductService _productService;
