@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PIMS.API.Middleware;
 using PIMS.Application.Interfaces;
 using PIMS.Application.Services;
 using PIMS.Infrastructure.Data;
@@ -38,6 +39,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseAuthorization();
 
