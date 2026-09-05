@@ -54,6 +54,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPut("price/bulk")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> BulkAdjustPrice(
         BulkPriceAdjustmentDto dto)
     {
@@ -63,6 +64,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPut("{id:int}/price")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> AdjustPrice(
         int id,
         PriceAdjustmentDto dto)

@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PIMS.Application.DTOs.Inventory;
 using PIMS.Application.Interfaces;
@@ -7,6 +9,7 @@ namespace PIMS.API.Controllers;
 
 [ApiController]
 [Route("api/v1/inventory")]
+[Authorize]
 public class InventoryController : ControllerBase
 {
     private readonly IInventoryService _inventoryService;
@@ -53,11 +56,18 @@ public class InventoryController : ControllerBase
     }
 
     [HttpPost("{id:int}/audits")]
+    [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> PerformAudit(
         int id,
         InventoryAuditDto dto)
     {
-        var userId = 1;
+        var userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
 
         var audit = await _inventoryService
             .PerformAuditAsync(id, dto, userId);
@@ -74,11 +84,18 @@ public class InventoryController : ControllerBase
     }
 
     [HttpPost("{id:int}/transactions")]
+    [Authorize]
     public async Task<IActionResult> ProcessTransaction(
         int id,
         InventoryTransactionDto dto)
     {
-        var userId = 1;
+        var userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
 
         var transaction = await _inventoryService
             .ProcessTransactionAsync(id, dto, userId);
