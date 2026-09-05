@@ -9,13 +9,16 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IJwtService _jwtService;
 
     public AuthService(
         IUserRepository userRepository,
-        IPasswordHasher<User> passwordHasher)
+        IPasswordHasher<User> passwordHasher,
+        IJwtService jwtService)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
+        _jwtService = jwtService;
     }
 
     public async Task<UserResponseDto> RegisterAsync(RegisterDto dto)
@@ -78,6 +81,51 @@ public class AuthService : IAuthService
             UserID = user.UserID,
             Username = user.Username,
             Email = user.Email
+        };
+    }
+
+    public async Task<LoginResponseDto> LoginAsync(LoginDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Username))
+        {
+            throw new ArgumentException("Username is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Password))
+        {
+            throw new ArgumentException("Password is required.");
+        }
+
+        var user = await _userRepository
+            .GetByUsernameAsync(dto.Username.Trim());
+
+        if (user == null || !user.IsActive)
+        {
+            throw new ArgumentException("Invalid username or password.");
+        }
+
+        var result = _passwordHasher.VerifyHashedPassword(
+            user,
+            user.PasswordHash,
+            dto.Password);
+
+        if (result == PasswordVerificationResult.Failed)
+        {
+            throw new ArgumentException("Invalid username or password.");
+        }
+
+        var role = user.UserRoles
+            .Select(ur => ur.Role.RoleName)
+            .FirstOrDefault() ?? "User";
+
+        var token = _jwtService.GenerateToken(user);
+
+        return new LoginResponseDto
+        {
+            Token = token,
+            UserID = user.UserID,
+            Username = user.Username,
+            Role = role
         };
     }
 }

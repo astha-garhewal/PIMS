@@ -6,6 +6,7 @@ using PIMS.Application.Services;
 using PIMS.Domain.Entities;
 using PIMS.Infrastructure.Data;
 using PIMS.Infrastructure.Repositories;
+using PIMS.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,7 @@ builder.Services.AddScoped<LowInventoryAlertService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<IJwtService, JwtService>();
 
 builder.Services.AddControllers();
 
