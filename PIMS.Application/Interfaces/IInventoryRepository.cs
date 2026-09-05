@@ -11,4 +11,8 @@ public interface IInventoryRepository
     Task AddAsync(Inventory inventory);
 
     Task AddTransactionAsync(InventoryTransaction transaction);
+
+    Task AddAuditAsync(InventoryAudit audit);
+
+    Task<List<InventoryAudit>> GetAuditsAsync(int inventoryId);
 }

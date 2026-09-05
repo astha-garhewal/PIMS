@@ -12,4 +12,12 @@ public interface IInventoryService
         int inventoryId,
         InventoryTransactionDto dto,
         int userId);
+
+    Task<InventoryAuditResponseDto> PerformAuditAsync(
+        int inventoryId,
+        InventoryAuditDto dto,
+        int userId);
+
+    Task<List<InventoryAuditResponseDto>> GetAuditsAsync(
+        int inventoryId);
 }

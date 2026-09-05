@@ -183,4 +183,88 @@ public class InventoryService : IInventoryService
             CurrentQuantity = inventory.Quantity
         };
     }
+
+    public async Task<InventoryAuditResponseDto> PerformAuditAsync(
+        int inventoryId,
+        InventoryAuditDto dto,
+        int userId)
+    {
+        if (dto.AdjustedQuantity < 0)
+        {
+            throw new ArgumentException(
+                "Adjusted quantity cannot be negative.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+        {
+            throw new ArgumentException("Audit reason is required.");
+        }
+
+        var inventory =
+            await _inventoryRepository.GetByIdAsync(inventoryId);
+
+        if (inventory == null)
+        {
+            throw new ArgumentException("Inventory does not exist.");
+        }
+
+        var previousQuantity = inventory.Quantity;
+        var difference = dto.AdjustedQuantity - previousQuantity;
+
+        inventory.Quantity = dto.AdjustedQuantity;
+
+        var audit = new InventoryAudit
+        {
+            InventoryID = inventory.InventoryID,
+            PreviousQuantity = previousQuantity,
+            AdjustedQuantity = dto.AdjustedQuantity,
+            Difference = difference,
+            Reason = dto.Reason.Trim(),
+            AuditDate = DateTime.UtcNow,
+            UserID = userId
+        };
+
+        await _inventoryRepository.AddAuditAsync(audit);
+
+        if (inventory.Quantity <= inventory.LowStockThreshold)
+        {
+            await _alertService.CheckAndCreateAlertAsync(inventory);
+        }
+        else
+        {
+            await _alertService.ResolveAlertIfStockRecoveredAsync(
+                inventory);
+        }
+
+        return new InventoryAuditResponseDto
+        {
+            AuditID = audit.AuditID,
+            InventoryID = audit.InventoryID,
+            PreviousQuantity = audit.PreviousQuantity,
+            AdjustedQuantity = audit.AdjustedQuantity,
+            Difference = audit.Difference,
+            Reason = audit.Reason,
+            AuditDate = audit.AuditDate,
+            UserID = audit.UserID
+        };
+    }
+
+    public async Task<List<InventoryAuditResponseDto>> GetAuditsAsync(
+        int inventoryId)
+    {
+        var audits =
+            await _inventoryRepository.GetAuditsAsync(inventoryId);
+
+        return audits.Select(a => new InventoryAuditResponseDto
+        {
+            AuditID = a.AuditID,
+            InventoryID = a.InventoryID,
+            PreviousQuantity = a.PreviousQuantity,
+            AdjustedQuantity = a.AdjustedQuantity,
+            Difference = a.Difference,
+            Reason = a.Reason,
+            AuditDate = a.AuditDate,
+            UserID = a.UserID
+        }).ToList();
+    }
 }

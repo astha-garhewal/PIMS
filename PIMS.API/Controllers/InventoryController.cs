@@ -52,6 +52,27 @@ public class InventoryController : ControllerBase
         return Ok(alerts);
     }
 
+    [HttpPost("{id:int}/audits")]
+    public async Task<IActionResult> PerformAudit(
+        int id,
+        InventoryAuditDto dto)
+    {
+        var userId = 1;
+
+        var audit = await _inventoryService
+            .PerformAuditAsync(id, dto, userId);
+
+        return Ok(audit);
+    }
+
+    [HttpGet("{id:int}/audits")]
+    public async Task<IActionResult> GetAudits(int id)
+    {
+        var audits = await _inventoryService.GetAuditsAsync(id);
+
+        return Ok(audits);
+    }
+
     [HttpPost("{id:int}/transactions")]
     public async Task<IActionResult> ProcessTransaction(
         int id,

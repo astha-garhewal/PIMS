@@ -39,4 +39,18 @@ public class InventoryRepository : IInventoryRepository
         await _context.InventoryTransactions.AddAsync(transaction);
         await _context.SaveChangesAsync();
     }
+
+    public async Task AddAuditAsync(InventoryAudit audit)
+    {
+        await _context.InventoryAudits.AddAsync(audit);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<InventoryAudit>> GetAuditsAsync(int inventoryId)
+    {
+        return await _context.InventoryAudits
+            .Where(a => a.InventoryID == inventoryId)
+            .OrderByDescending(a => a.AuditDate)
+            .ToListAsync();
+    }
 }
