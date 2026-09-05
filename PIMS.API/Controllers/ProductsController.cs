@@ -16,9 +16,13 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? search,
+        [FromQuery] int? categoryId)
     {
-        var products = await _productService.GetAllAsync();
+        var products = await _productService.SearchAsync(
+            search,
+            categoryId);
 
         return Ok(products);
     }
@@ -45,5 +49,29 @@ public class ProductsController : ControllerBase
             nameof(GetById),
             new { id = product.ProductID },
             product);
+    }
+
+    [HttpPut("price/bulk")]
+    public async Task<IActionResult> BulkAdjustPrice(
+        BulkPriceAdjustmentDto dto)
+    {
+        var products = await _productService.BulkAdjustPriceAsync(dto);
+
+        return Ok(products);
+    }
+
+    [HttpPut("{id:int}/price")]
+    public async Task<IActionResult> AdjustPrice(
+        int id,
+        PriceAdjustmentDto dto)
+    {
+        var product = await _productService.AdjustPriceAsync(id, dto);
+
+        if (product == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(product);
     }
 }

@@ -10,6 +10,12 @@ public interface IProductRepository
 
     Task<List<Product>> GetAllAsync();
 
+    Task<List<Product>> SearchAsync(
+        string? search,
+        int? categoryId);
+
+    Task<List<Product>> GetByIdsAsync(List<int> productIds);
+
     Task AddAsync(Product product);
 
     Task UpdateAsync(Product product);

@@ -37,6 +37,46 @@ public class ProductRepository : IProductRepository
             .ToListAsync();
     }
 
+    public async Task<List<Product>> SearchAsync(
+        string? search,
+        int? categoryId)
+    {
+        var query = _context.Products
+            .Include(p => p.ProductCategories)
+            .ThenInclude(pc => pc.Category)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            search = search.Trim();
+
+            query = query.Where(p =>
+                p.Name.Contains(search) ||
+                p.SKU.Contains(search));
+        }
+
+        if (categoryId.HasValue)
+        {
+            query = query.Where(p =>
+                p.ProductCategories
+                    .Any(pc => pc.CategoryID == categoryId.Value));
+        }
+
+        return await query
+            .OrderBy(p => p.ProductID)
+            .ToListAsync();
+    }
+
+    public async Task<List<Product>> GetByIdsAsync(
+        List<int> productIds)
+    {
+        return await _context.Products
+            .Include(p => p.ProductCategories)
+            .ThenInclude(pc => pc.Category)
+            .Where(p => productIds.Contains(p.ProductID))
+            .ToListAsync();
+    }
+
     public async Task AddAsync(Product product)
     {
         await _context.Products.AddAsync(product);

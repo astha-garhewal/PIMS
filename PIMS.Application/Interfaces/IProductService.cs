@@ -9,4 +9,15 @@ public interface IProductService
     Task<List<ProductResponseDto>> GetAllAsync();
 
     Task<ProductResponseDto?> GetByIdAsync(int productId);
+
+    Task<List<ProductResponseDto>> SearchAsync(
+        string? search,
+        int? categoryId);
+
+    Task<ProductResponseDto?> AdjustPriceAsync(
+        int productId,
+        PriceAdjustmentDto dto);
+
+    Task<List<ProductResponseDto>> BulkAdjustPriceAsync(
+        BulkPriceAdjustmentDto dto);
 }

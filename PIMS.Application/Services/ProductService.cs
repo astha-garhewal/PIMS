@@ -114,4 +114,159 @@ public class ProductService : IProductService
                 .ToList()
         };
     }
+
+    public async Task<List<ProductResponseDto>> SearchAsync(
+        string? search,
+        int? categoryId)
+    {
+        var products = await _productRepository.SearchAsync(
+            search,
+            categoryId);
+
+        return products.Select(p => new ProductResponseDto
+        {
+            ProductID = p.ProductID,
+            SKU = p.SKU,
+            Name = p.Name,
+            Description = p.Description,
+            Price = p.Price,
+            CreatedDate = p.CreatedDate,
+            Categories = p.ProductCategories
+                .Select(pc => pc.Category.CategoryName)
+                .ToList()
+        }).ToList();
+    }
+
+    public async Task<ProductResponseDto?> AdjustPriceAsync(
+        int productId,
+        PriceAdjustmentDto dto)
+    {
+        var product = await _productRepository.GetByIdAsync(productId);
+
+        if (product == null)
+        {
+            return null;
+        }
+
+        if (dto.Value < 0)
+        {
+            throw new ArgumentException(
+                "Adjustment value cannot be negative.");
+        }
+
+        var adjustmentType = dto.AdjustmentType.Trim().ToLowerInvariant();
+
+        if (adjustmentType == "fixed")
+        {
+            product.Price -= dto.Value;
+        }
+        else if (adjustmentType == "percentage")
+        {
+            product.Price -= product.Price * dto.Value / 100;
+        }
+        else
+        {
+            throw new ArgumentException(
+                "Adjustment type must be 'fixed' or 'percentage'.");
+        }
+
+        if (product.Price < 0)
+        {
+            product.Price = 0;
+        }
+
+        product.UpdatedDate = DateTime.UtcNow;
+
+        await _productRepository.UpdateAsync(product);
+
+        return new ProductResponseDto
+        {
+            ProductID = product.ProductID,
+            SKU = product.SKU,
+            Name = product.Name,
+            Description = product.Description,
+            Price = product.Price,
+            CreatedDate = product.CreatedDate,
+            Categories = product.ProductCategories
+                .Select(pc => pc.Category.CategoryName)
+                .ToList()
+        };
+    }
+
+    public async Task<List<ProductResponseDto>> BulkAdjustPriceAsync(
+        BulkPriceAdjustmentDto dto)
+    {
+        if (dto.ProductIds == null || !dto.ProductIds.Any())
+        {
+            throw new ArgumentException(
+                "At least one product ID is required.");
+        }
+
+        if (dto.Value < 0)
+        {
+            throw new ArgumentException(
+                "Adjustment value cannot be negative.");
+        }
+
+        var adjustmentType = dto.AdjustmentType
+            .Trim()
+            .ToLowerInvariant();
+
+        if (adjustmentType != "fixed" &&
+            adjustmentType != "percentage")
+        {
+            throw new ArgumentException(
+                "Adjustment type must be 'fixed' or 'percentage'.");
+        }
+
+        var productIds = dto.ProductIds
+            .Distinct()
+            .ToList();
+
+        var products = await _productRepository
+            .GetByIdsAsync(productIds);
+
+        if (products.Count != productIds.Count)
+        {
+            throw new ArgumentException(
+                "One or more product IDs do not exist.");
+        }
+
+        foreach (var product in products)
+        {
+            if (adjustmentType == "fixed")
+            {
+                product.Price -= dto.Value;
+            }
+            else
+            {
+                product.Price -= product.Price * dto.Value / 100;
+            }
+
+            if (product.Price < 0)
+            {
+                product.Price = 0;
+            }
+
+            product.UpdatedDate = DateTime.UtcNow;
+        }
+
+        foreach (var product in products)
+        {
+            await _productRepository.UpdateAsync(product);
+        }
+
+        return products.Select(p => new ProductResponseDto
+        {
+            ProductID = p.ProductID,
+            SKU = p.SKU,
+            Name = p.Name,
+            Description = p.Description,
+            Price = p.Price,
+            CreatedDate = p.CreatedDate,
+            Categories = p.ProductCategories
+                .Select(pc => pc.Category.CategoryName)
+                .ToList()
+        }).ToList();
+    }
 }
