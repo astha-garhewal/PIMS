@@ -33,4 +33,10 @@ public class InventoryRepository : IInventoryRepository
         await _context.Inventory.AddAsync(inventory);
         await _context.SaveChangesAsync();
     }
+
+    public async Task AddTransactionAsync(InventoryTransaction transaction)
+    {
+        await _context.InventoryTransactions.AddAsync(transaction);
+        await _context.SaveChangesAsync();
+    }
 }

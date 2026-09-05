@@ -97,4 +97,78 @@ public class InventoryService : IInventoryService
             LowStockThreshold = inventory.LowStockThreshold
         };
     }
+
+    public async Task<InventoryTransactionResponseDto> ProcessTransactionAsync(
+        int inventoryId,
+        InventoryTransactionDto dto,
+        int userId)
+    {
+        if (dto.Quantity <= 0)
+        {
+            throw new ArgumentException("Quantity must be greater than zero.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.TransactionType))
+        {
+            throw new ArgumentException("Transaction type is required.");
+        }
+
+        var transactionType = dto.TransactionType.Trim().ToUpperInvariant();
+
+        if (transactionType != "ADD" && transactionType != "SUBTRACT")
+        {
+            throw new ArgumentException(
+                "Transaction type must be 'ADD' or 'SUBTRACT'.");
+        }
+
+        var inventory = await _inventoryRepository.GetByIdAsync(inventoryId);
+
+        if (inventory == null)
+        {
+            throw new ArgumentException("Inventory does not exist.");
+        }
+
+        int quantityChange;
+
+        if (transactionType == "ADD")
+        {
+            quantityChange = dto.Quantity;
+            inventory.Quantity += dto.Quantity;
+        }
+        else
+        {
+            quantityChange = -dto.Quantity;
+
+            if (inventory.Quantity < dto.Quantity)
+            {
+                throw new ArgumentException("Insufficient inventory.");
+            }
+
+            inventory.Quantity -= dto.Quantity;
+        }
+
+        var transaction = new InventoryTransaction
+        {
+            InventoryID = inventory.InventoryID,
+            QuantityChange = quantityChange,
+            TransactionType = transactionType,
+            Reason = dto.Reason,
+            TransactionDate = DateTime.UtcNow,
+            UserID = userId
+        };
+
+        await _inventoryRepository.AddTransactionAsync(transaction);
+
+        return new InventoryTransactionResponseDto
+        {
+            TransactionID = transaction.TransactionID,
+            InventoryID = inventory.InventoryID,
+            QuantityChange = quantityChange,
+            TransactionType = transactionType,
+            Reason = transaction.Reason,
+            TransactionDate = transaction.TransactionDate,
+            UserID = userId,
+            CurrentQuantity = inventory.Quantity
+        };
+    }
 }

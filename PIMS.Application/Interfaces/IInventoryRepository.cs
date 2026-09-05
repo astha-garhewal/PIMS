@@ -9,4 +9,6 @@ public interface IInventoryRepository
     Task<Inventory?> GetByProductIdAsync(int productId);
 
     Task AddAsync(Inventory inventory);
+
+    Task AddTransactionAsync(InventoryTransaction transaction);
 }

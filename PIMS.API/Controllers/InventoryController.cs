@@ -38,4 +38,17 @@ public class InventoryController : ControllerBase
 
         return Ok(inventory);
     }
+
+    [HttpPost("{id:int}/transactions")]
+    public async Task<IActionResult> ProcessTransaction(
+        int id,
+        InventoryTransactionDto dto)
+    {
+        var userId = 1;
+
+        var transaction = await _inventoryService
+            .ProcessTransactionAsync(id, dto, userId);
+
+        return Ok(transaction);
+    }
 }
