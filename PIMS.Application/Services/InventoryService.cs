@@ -8,13 +8,16 @@ public class InventoryService : IInventoryService
 {
     private readonly IInventoryRepository _inventoryRepository;
     private readonly IProductRepository _productRepository;
+    private readonly LowInventoryAlertService _alertService;
 
     public InventoryService(
         IInventoryRepository inventoryRepository,
-        IProductRepository productRepository)
+        IProductRepository productRepository,
+        LowInventoryAlertService alertService)
     {
         _inventoryRepository = inventoryRepository;
         _productRepository = productRepository;
+        _alertService = alertService;
     }
 
     public async Task<InventoryResponseDto> CreateAsync(CreateInventoryDto dto)
@@ -158,6 +161,15 @@ public class InventoryService : IInventoryService
         };
 
         await _inventoryRepository.AddTransactionAsync(transaction);
+
+        if (inventory.Quantity <= inventory.LowStockThreshold)
+        {
+            await _alertService.CheckAndCreateAlertAsync(inventory);
+        }
+        else
+        {
+            await _alertService.ResolveAlertIfStockRecoveredAsync(inventory);
+        }
 
         return new InventoryTransactionResponseDto
         {

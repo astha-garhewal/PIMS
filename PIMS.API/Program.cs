@@ -19,6 +19,11 @@ builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 
+builder.Services.AddScoped<
+    ILowInventoryAlertRepository,
+    LowInventoryAlertRepository>();
+builder.Services.AddScoped<LowInventoryAlertService>();
+
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();

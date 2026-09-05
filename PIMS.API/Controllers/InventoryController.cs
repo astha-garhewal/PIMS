@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PIMS.Application.DTOs.Inventory;
 using PIMS.Application.Interfaces;
+using PIMS.Application.Services;
 
 namespace PIMS.API.Controllers;
 
@@ -9,10 +10,14 @@ namespace PIMS.API.Controllers;
 public class InventoryController : ControllerBase
 {
     private readonly IInventoryService _inventoryService;
+    private readonly LowInventoryAlertService _alertService;
 
-    public InventoryController(IInventoryService inventoryService)
+    public InventoryController(
+        IInventoryService inventoryService,
+        LowInventoryAlertService alertService)
     {
         _inventoryService = inventoryService;
+        _alertService = alertService;
     }
 
     [HttpPost]
@@ -37,6 +42,14 @@ public class InventoryController : ControllerBase
         }
 
         return Ok(inventory);
+    }
+
+    [HttpGet("alerts")]
+    public async Task<IActionResult> GetActiveAlerts()
+    {
+        var alerts = await _alertService.GetActiveAlertsAsync();
+
+        return Ok(alerts);
     }
 
     [HttpPost("{id:int}/transactions")]
