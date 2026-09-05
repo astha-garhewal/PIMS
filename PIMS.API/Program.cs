@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using PIMS.API.Middleware;
 using PIMS.Application.Interfaces;
 using PIMS.Application.Services;
+using PIMS.Domain.Entities;
 using PIMS.Infrastructure.Data;
 using PIMS.Infrastructure.Repositories;
 
@@ -24,6 +26,10 @@ builder.Services.AddScoped<
     ILowInventoryAlertRepository,
     LowInventoryAlertRepository>();
 builder.Services.AddScoped<LowInventoryAlertService>();
+
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
 builder.Services.AddControllers();
 
