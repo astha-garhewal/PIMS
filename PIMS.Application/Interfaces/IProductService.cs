@@ -10,6 +10,10 @@ public interface IProductService
 
     Task<ProductResponseDto?> GetByIdAsync(int productId);
 
+    Task<ProductResponseDto?> UpdateAsync(
+        int productId,
+        UpdateProductDto dto);
+
     Task<List<ProductResponseDto>> SearchAsync(
         string? search,
         int? categoryId);

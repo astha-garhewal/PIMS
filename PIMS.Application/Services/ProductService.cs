@@ -150,6 +150,62 @@ public class ProductService : IProductService
             return response;
     }
 
+    public async Task<ProductResponseDto?> UpdateAsync(
+        int productId,
+        UpdateProductDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.SKU))
+        {
+            throw new ArgumentException("SKU is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Name))
+        {
+            throw new ArgumentException("Product name is required.");
+        }
+
+        if (dto.Price < 0)
+        {
+            throw new ArgumentException("Product price cannot be negative.");
+        }
+
+        var product = await _productRepository.GetByIdAsync(productId);
+
+        if (product == null)
+        {
+            return null;
+        }
+
+        var existingProduct = await _productRepository.GetBySkuAsync(dto.SKU);
+
+        if (existingProduct != null && existingProduct.ProductID != productId)
+        {
+            throw new ArgumentException("SKU already exists.");
+        }
+
+        product.SKU = dto.SKU.Trim();
+        product.Name = dto.Name.Trim();
+        product.Description = dto.Description;
+        product.Price = dto.Price;
+        product.UpdatedDate = DateTime.UtcNow;
+
+        await _productRepository.UpdateAsync(product);
+        _cache.Remove($"product_{product.ProductID}");
+
+        return new ProductResponseDto
+        {
+            ProductID = product.ProductID,
+            SKU = product.SKU,
+            Name = product.Name,
+            Description = product.Description,
+            Price = product.Price,
+            CreatedDate = product.CreatedDate,
+            Categories = product.ProductCategories
+                .Select(pc => pc.Category.CategoryName)
+                .ToList()
+        };
+    }
+
     public async Task<List<ProductResponseDto>> SearchAsync(
         string? search,
         int? categoryId)

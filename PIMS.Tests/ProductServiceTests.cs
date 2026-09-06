@@ -145,6 +145,66 @@ public class ProductServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_UpdatesProductFields()
+    {
+        var product = CreateProduct(1000);
+        _productRepositoryMock
+            .Setup(repository => repository.GetByIdAsync(1))
+            .ReturnsAsync(product);
+        _productRepositoryMock
+            .Setup(repository => repository.GetBySkuAsync("LAP-001-UPDATED"))
+            .ReturnsAsync((Product?)null);
+
+        var result = await _productService.UpdateAsync(
+            1,
+            new UpdateProductDto
+            {
+                SKU = "LAP-001-UPDATED",
+                Name = "Updated Laptop",
+                Description = "Updated description",
+                Price = 1200
+            });
+
+        Assert.NotNull(result);
+        Assert.Equal("LAP-001-UPDATED", result!.SKU);
+        Assert.Equal("Updated Laptop", result.Name);
+        Assert.Equal(1200, result.Price);
+        _productRepositoryMock.Verify(
+            repository => repository.UpdateAsync(product),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_RejectsDuplicateSku()
+    {
+        var product = CreateProduct(1000);
+        var existingProduct = CreateProduct(800);
+        existingProduct.ProductID = 2;
+
+        _productRepositoryMock
+            .Setup(repository => repository.GetByIdAsync(1))
+            .ReturnsAsync(product);
+        _productRepositoryMock
+            .Setup(repository => repository.GetBySkuAsync("LAP-002"))
+            .ReturnsAsync(existingProduct);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _productService.UpdateAsync(
+                1,
+                new UpdateProductDto
+                {
+                    SKU = "LAP-002",
+                    Name = "Updated Laptop",
+                    Price = 1200
+                }));
+
+        _productRepositoryMock.Verify(
+            repository => repository.UpdateAsync(
+                It.IsAny<Product>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task BulkAdjustPriceAsync_UsesSingleRangeUpdate()
     {
         var products = new List<Product>

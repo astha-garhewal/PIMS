@@ -53,6 +53,22 @@ public class ProductsController : ControllerBase
             product);
     }
 
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> Update(
+        int id,
+        UpdateProductDto dto)
+    {
+        var product = await _productService.UpdateAsync(id, dto);
+
+        if (product == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(product);
+    }
+
     [HttpPut("price/bulk")]
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> BulkAdjustPrice(
