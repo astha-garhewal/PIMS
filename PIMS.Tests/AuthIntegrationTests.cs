@@ -1,7 +1,13 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using PIMS.Application.DTOs.Auth;
+using PIMS.Application.DTOs.Inventory;
+using PIMS.Application.DTOs.Products;
+using PIMS.Domain.Entities;
+using PIMS.Infrastructure.Data;
 
 namespace PIMS.Tests;
 
@@ -144,5 +150,186 @@ public class AuthIntegrationTests
         var response = await client.GetAsync("/api/v1/products");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task User_Can_Get_Products()
+    {
+        var token = await RegisterAndLoginAsync(
+            $"user_{Guid.NewGuid():N}");
+
+        using var client = CreateAuthenticatedClient(token);
+
+        var response = await client.GetAsync("/api/v1/products");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task User_Cannot_Adjust_Product_Price()
+    {
+        var token = await RegisterAndLoginAsync(
+            $"user_{Guid.NewGuid():N}");
+
+        using var client = CreateAuthenticatedClient(token);
+
+        var response = await client.PutAsJsonAsync(
+            "/api/v1/products/999999/price",
+            new PriceAdjustmentDto
+            {
+                Value = 10,
+                AdjustmentType = "fixed"
+            });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Administrator_Can_Access_Price_Adjustment_Endpoint()
+    {
+        var username = $"admin_{Guid.NewGuid():N}";
+
+        await RegisterAndLoginAsync(username);
+        await PromoteUserToAdministratorAsync(username);
+
+        var token = await LoginAsync(username);
+        using var client = CreateAuthenticatedClient(token);
+
+        var response = await client.PutAsJsonAsync(
+            "/api/v1/products/999999/price",
+            new PriceAdjustmentDto
+            {
+                Value = 10,
+                AdjustmentType = "fixed"
+            });
+
+        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task User_Cannot_Perform_Inventory_Audit()
+    {
+        var token = await RegisterAndLoginAsync(
+            $"user_{Guid.NewGuid():N}");
+
+        using var client = CreateAuthenticatedClient(token);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/inventory/999999/audits",
+            new InventoryAuditDto
+            {
+                AdjustedQuantity = 10,
+                Reason = "Test audit"
+            });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Administrator_Can_Access_Inventory_Audit_Endpoint()
+    {
+        var username = $"admin_{Guid.NewGuid():N}";
+
+        await RegisterAndLoginAsync(username);
+        await PromoteUserToAdministratorAsync(username);
+
+        var token = await LoginAsync(username);
+        using var client = CreateAuthenticatedClient(token);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/inventory/999999/audits",
+            new InventoryAuditDto
+            {
+                AdjustedQuantity = 10,
+                Reason = "Test audit"
+            });
+
+        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private async Task<string> RegisterAndLoginAsync(
+        string username,
+        string password = "Test@12345")
+    {
+        await _client.PostAsJsonAsync(
+            "/api/v1/auth/register",
+            new RegisterDto
+            {
+                Username = username,
+                Email = $"{username}@example.com",
+                Password = password
+            });
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new LoginDto
+            {
+                Username = username,
+                Password = password
+            });
+
+        response.EnsureSuccessStatusCode();
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<LoginResponseDto>();
+
+        return result!.Token;
+    }
+
+    private async Task PromoteUserToAdministratorAsync(string username)
+    {
+        using var scope = _factory.Services.CreateScope();
+
+        var dbContext = scope.ServiceProvider
+            .GetRequiredService<ApplicationDbContext>();
+
+        var user = await dbContext.Users
+            .FirstAsync(user => user.Username == username);
+
+        var adminRole = await dbContext.Roles
+            .FirstAsync(role => role.RoleName == "Administrator");
+
+        var existingRoles = await dbContext.UserRoles
+            .Where(userRole => userRole.UserID == user.UserID)
+            .ToListAsync();
+
+        dbContext.UserRoles.RemoveRange(existingRoles);
+        dbContext.UserRoles.Add(new UserRole
+        {
+            UserID = user.UserID,
+            RoleID = adminRole.RoleID
+        });
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    private async Task<string> LoginAsync(
+        string username,
+        string password = "Test@12345")
+    {
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new LoginDto
+            {
+                Username = username,
+                Password = password
+            });
+
+        response.EnsureSuccessStatusCode();
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<LoginResponseDto>();
+
+        return result!.Token;
+    }
+
+    private HttpClient CreateAuthenticatedClient(string token)
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+        return client;
     }
 }
