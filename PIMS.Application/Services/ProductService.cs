@@ -8,13 +8,16 @@ namespace PIMS.Application.Services;
 public class ProductService : IProductService
 {
     private readonly IProductRepository _productRepository;
+    private readonly ICategoryRepository _categoryRepository;
     private readonly IMemoryCache _cache;
 
     public ProductService(
         IProductRepository productRepository,
+        ICategoryRepository categoryRepository,
         IMemoryCache cache)
     {
         _productRepository = productRepository;
+        _categoryRepository = categoryRepository;
         _cache = cache;
     }
 
@@ -40,6 +43,17 @@ public class ProductService : IProductService
         if (existingProduct != null)
         {
             throw new ArgumentException("SKU already exists.");
+        }
+
+        foreach (var categoryId in dto.CategoryIds.Distinct())
+        {
+            var category = await _categoryRepository.GetByIdAsync(categoryId);
+
+            if (category == null)
+            {
+                throw new ArgumentException(
+                    $"Category with ID {categoryId} does not exist.");
+            }
         }
 
         var product = new Product

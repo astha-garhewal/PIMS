@@ -10,15 +10,18 @@ namespace PIMS.Tests;
 public class ProductServiceTests
 {
     private readonly Mock<IProductRepository> _productRepositoryMock;
+    private readonly Mock<ICategoryRepository> _categoryRepositoryMock;
     private readonly ProductService _productService;
 
     public ProductServiceTests()
     {
         _productRepositoryMock = new Mock<IProductRepository>();
+        _categoryRepositoryMock = new Mock<ICategoryRepository>();
         var cacheMock = new Mock<IMemoryCache>();
 
         _productService = new ProductService(
             _productRepositoryMock.Object,
+            _categoryRepositoryMock.Object,
             cacheMock.Object);
     }
 
@@ -116,6 +119,29 @@ public class ProductServiceTests
                     Value = 100,
                     AdjustmentType = "random"
                 }));
+    }
+
+    [Fact]
+    public async Task CreateAsync_Should_Reject_Invalid_Category()
+    {
+        var dto = new CreateProductDto
+        {
+            SKU = "TEST-INVALID-CATEGORY",
+            Name = "Test Product",
+            Price = 100,
+            CategoryIds = new List<int> { 99999 }
+        };
+
+        _productRepositoryMock
+            .Setup(repository => repository.GetBySkuAsync(dto.SKU))
+            .ReturnsAsync((Product?)null);
+
+        _categoryRepositoryMock
+            .Setup(repository => repository.GetByIdAsync(99999))
+            .ReturnsAsync((Category?)null);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _productService.CreateAsync(dto));
     }
 
     private static Product CreateProduct(decimal price)
