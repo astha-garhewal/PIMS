@@ -270,26 +270,25 @@ public class ProductService : IProductService
 
         foreach (var product in products)
         {
-            if (adjustmentType == "fixed")
+            decimal deduction;
+
+            if (adjustmentType == "percentage")
             {
-                product.Price -= dto.Value;
+                deduction = product.Price * dto.Value / 100;
             }
             else
             {
-                product.Price -= product.Price * dto.Value / 100;
+                deduction = dto.Value;
             }
 
-            if (product.Price < 0)
-            {
-                product.Price = 0;
-            }
-
+            product.Price = Math.Max(0, product.Price - deduction);
             product.UpdatedDate = DateTime.UtcNow;
         }
 
+        await _productRepository.UpdateRangeAsync(products);
+
         foreach (var product in products)
         {
-            await _productRepository.UpdateAsync(product);
             _cache.Remove($"product_{product.ProductID}");
         }
 

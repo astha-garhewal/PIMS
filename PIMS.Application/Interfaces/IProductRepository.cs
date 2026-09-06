@@ -20,6 +20,8 @@ public interface IProductRepository
 
     Task UpdateAsync(Product product);
 
+    Task UpdateRangeAsync(List<Product> products);
+
     Task DeleteAsync(Product product);
 
     Task AddProductCategoriesAsync(List<ProductCategory> productCategories);

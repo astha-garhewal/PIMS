@@ -144,6 +144,52 @@ public class ProductServiceTests
             _productService.CreateAsync(dto));
     }
 
+    [Fact]
+    public async Task BulkAdjustPriceAsync_UsesSingleRangeUpdate()
+    {
+        var products = new List<Product>
+        {
+            CreateProduct(1000),
+            new Product
+            {
+                ProductID = 2,
+                SKU = "LAP-002",
+                Name = "HP Laptop",
+                Price = 2000
+            }
+        };
+
+        _productRepositoryMock
+            .Setup(repository => repository.GetByIdsAsync(
+                It.IsAny<List<int>>()))
+            .ReturnsAsync(products);
+
+        _productRepositoryMock
+            .Setup(repository => repository.UpdateRangeAsync(
+                It.IsAny<List<Product>>()))
+            .Returns(Task.CompletedTask);
+
+        var result = await _productService.BulkAdjustPriceAsync(
+            new BulkPriceAdjustmentDto
+            {
+                ProductIds = new List<int> { 1, 2 },
+                Value = 10,
+                AdjustmentType = "percentage"
+            });
+
+        Assert.Equal(900, result[0].Price);
+        Assert.Equal(1800, result[1].Price);
+        _productRepositoryMock.Verify(
+            repository => repository.UpdateRangeAsync(
+                It.Is<List<Product>>(updatedProducts =>
+                    updatedProducts.Count == 2)),
+            Times.Once);
+        _productRepositoryMock.Verify(
+            repository => repository.UpdateAsync(
+                It.IsAny<Product>()),
+            Times.Never);
+    }
+
     private static Product CreateProduct(decimal price)
     {
         return new Product
